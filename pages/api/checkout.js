@@ -1,55 +1,48 @@
-import { useState } from "react";
+// pages/api/checkout.js
+import Razorpay from "razorpay";
+import { supabase } from "../../lib/supabaseClient";
 
-export default function Checkout() {
-  const [loading, setLoading] = useState(false);
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
-  const startPayment = async () => {
-    setLoading(true);
+export default async function handler(req, res) {
+  if (req.method === "POST") {
     try {
-      // 1. Create order from backend
-      const orderRes = await fetch("/api/razorpay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 500 }), // test ₹500
-      });
-      const order = await orderRes.json();
+      const { amount, userId, productId } = req.body;
 
-      // 2. Open Razorpay Checkout
+      // Razorpay order create
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Chalta Bazaar",
-        description: "Test Transaction",
-        order_id: order.id,
-        handler: function (response) {
-          alert("Payment successful! ✅");
-          console.log("Payment response:", response);
-        },
-        prefill: {
-          name: "Narender",
-          email: "test@example.com",
-          contact: "9999999999",
-        },
-        theme: { color: "#3399cc" },
+        amount: amount * 100, // paise me
+        currency: "INR",
+        receipt: "receipt_" + Date.now(),
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      const order = await razorpay.orders.create(options);
 
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed ❌");
+      // Supabase me order save karo
+      const { data, error } = await supabase.from("orders").insert([
+        {
+          user_id: userId,
+          product_id: productId,
+          amount: amount,
+          status: "created",
+          razorpay_order_id: order.id,
+        },
+      ]);
+
+      if (error) {
+        console.error("Supabase error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      res.status(200).json(order);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
     }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Checkout Page</h1>
-      <button onClick={startPayment} disabled={loading}>
-        {loading ? "Processing..." : "Pay ₹500"}
-      </button>
-    </div>
-  );
+  } else {
+    res.status(405).json({ error: "Method not allowed" });
+  }
 }

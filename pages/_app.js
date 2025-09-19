@@ -1,12 +1,12 @@
+// pages/_app.js
+import { CartProvider } from "../context/CartContext";
 import "../styles/globals.css";
-import Navbar from "../components/Navbar";
 
 function MyApp({ Component, pageProps }) {
   return (
-    <>
-      <Navbar />
+    <CartProvider>
       <Component {...pageProps} />
-    </>
+    </CartProvider>
   );
 }
 

@@ -1,64 +1,73 @@
 import { useCart } from "../context/CartContext";
+import Script from "next/script";
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart } = useCart();
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const handlePayment = async () => {
+    if (total === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+
+    // 1. Backend से order बनवाओ
+    const res = await fetch("/api/razorpay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: total }),
+    });
+
+    const data = await res.json();
+
+    if (!data.orderId) {
+      alert("Error creating order");
+      return;
+    }
+
+    // 2. Razorpay options
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+      amount: total * 100,
+      currency: "INR",
+      name: "Chalta Bazaar",
+      description: "Order Payment",
+      order_id: data.orderId, // backend से मिला orderId
+      handler: function (response) {
+        alert("Payment successful! ID: " + response.razorpay_payment_id);
+        clearCart();
+      },
+      prefill: {
+        name: "Customer Name",
+        email: "customer@example.com",
+        contact: "9999999999",
+      },
+      theme: { color: "#0070f3" },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   return (
-    <div style={{ maxWidth: "900px", margin: "30px auto", padding: "20px" }}>
+    <div style={{ padding: "20px" }}>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       <h1>🛒 Your Cart</h1>
+
       {cart.length === 0 ? (
-        <p>No items in cart</p>
+        <p>Your cart is empty</p>
       ) : (
         <>
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {cart.map((item) => (
-              <li
-                key={item.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "10px 0",
-                  borderBottom: "1px solid #ddd"
-                }}
-              >
-                <div>
-                  <strong>{item.name}</strong> (x{item.qty})  
-                  <br />₹{item.price * item.qty}
-                </div>
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  style={{
-                    background: "red",
-                    color: "white",
-                    border: "none",
-                    padding: "6px 10px",
-                    borderRadius: "5px",
-                    cursor: "pointer"
-                  }}
-                >
-                  ❌ Remove
-                </button>
+          <ul>
+            {cart.map((item, i) => (
+              <li key={i}>
+                {item.name} - ₹{item.price}
+                <button onClick={() => removeFromCart(item.id)}>Remove</button>
               </li>
             ))}
           </ul>
-          <h3>Total: ₹{total}</h3>
-          <button
-            onClick={clearCart}
-            style={{
-              marginTop: "10px",
-              padding: "8px 12px",
-              background: "black",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            Clear Cart
-          </button>
+          <h2>Total: ₹{total}</h2>
+          <button onClick={handlePayment}>Pay with Razorpay</button>
         </>
       )}
     </div>
