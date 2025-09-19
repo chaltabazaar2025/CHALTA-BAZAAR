@@ -1,20 +1,11 @@
-import { useCart } from "../context/CartContext";
+import { useContext } from "react";
+import { CartContext } from "../context/CartContext";
 
-export default function AddToCartButton({ product }) {
-  const { addToCart } = useCart();
+export default function AddToCartButton({ productId }) {
+  const { addToCart } = useContext(CartContext);
 
   return (
-    <button
-      onClick={() => addToCart(product)}
-      style={{
-        padding: "8px 16px",
-        backgroundColor: "#0070f3",
-        color: "#fff",
-        border: "none",
-        borderRadius: "6px",
-        cursor: "pointer"
-      }}
-    >
+    <button onClick={() => addToCart(productId)}>
       Add to Cart
     </button>
   );
