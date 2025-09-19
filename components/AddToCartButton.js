@@ -1,7 +1,6 @@
-// components/AddToCartButton.js
 import { useCart } from "../context/CartContext";
 
-const AddToCartButton = ({ product }) => {
+export default function AddToCartButton({ product }) {
   const { addToCart } = useCart();
 
   return (
@@ -9,16 +8,14 @@ const AddToCartButton = ({ product }) => {
       onClick={() => addToCart(product)}
       style={{
         padding: "8px 16px",
-        background: "#0070f3",
-        color: "white",
+        backgroundColor: "#0070f3",
+        color: "#fff",
         border: "none",
-        borderRadius: "5px",
-        cursor: "pointer",
+        borderRadius: "6px",
+        cursor: "pointer"
       }}
     >
       Add to Cart
     </button>
   );
-};
-
-export default AddToCartButton;
+}
